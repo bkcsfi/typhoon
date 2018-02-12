@@ -3,6 +3,12 @@ variable "cluster_name" {
   description = "Unique cluster name"
 }
 
+variable "domain_suffix" {
+  type        = "string"
+  description = "domain name suffix used by controllers etcd"
+  default     = "example.com"
+}
+
 variable "vsphere_datacenter" {
   type        = "string"
   description = "vSphere datacenter name"
@@ -39,6 +45,11 @@ variable "controller_count" {
   type        = "string"
   default     = "1"
   description = "Number of controllers"
+}
+
+variable "controller_ip_addresses" {
+  type        = "list"
+  description = "list of controller ip addresses (overrides controller_count)"
 }
 
 variable "controller_cpu_count" {
@@ -105,6 +116,12 @@ variable "networking" {
   description = "Choice of networking provider (flannel or calico)"
   type        = "string"
   default     = "calico"
+}
+
+variable "network_mtu" {
+  description = "CNI interface MTU (applies to calico only)"
+  type        = "string"
+  default     = "1480"
 }
 
 variable "pod_cidr" {

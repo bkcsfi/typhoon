@@ -1,15 +1,12 @@
 # Controller instances
-resource "vsphere_record" "controllers" {
+resource "vsphere_virtual_machine" "controllers" {
   count = "${var.controller_count}"
 
   name   = "${var.cluster_name}-controller-${count.index}"
-  resource_pool_id = "${data.vsphere_source_pool.cluster_resource_pool.id}"
+  resource_pool_id = "${data.vsphere_resource_pool.cluster_resource_pool.id}"
   datastore_id     = "${data.vsphere_datastore.cluster_datastore.id}"
   folder           = "${vsphere_folder.folder.path}"
   
-
-  user_data = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
-  ssh_keys  = "${var.ssh_fingerprints}"
 
   tags = [
     "${vsphere_tag.controllers.id}",
@@ -18,7 +15,7 @@ resource "vsphere_record" "controllers" {
   enable_disk_uuid = true
 
   num_cpus = "${var.controller_cpu_count}"
-  memory   = "${controller_memory}"
+  memory   = "${var.controller_memory}"
 
   guest_id  = "${data.vsphere_virtual_machine.cluster_template_vm.guest_id}"
   scsi_type = "${data.vsphere_virtual_machine.cluster_template_vm.scsi_type}"
@@ -31,7 +28,7 @@ resource "vsphere_record" "controllers" {
 
   disk {
     label            = "disk0"
-    size             = "${var.controller_disk_size != '' ? var.controller_disk_size : data.vsphere_virtual_machine.cluster_template_vm.disks.0.size}"
+    size             = "${var.controller_disk_size != "" ? var.controller_disk_size : data.vsphere_virtual_machine.cluster_template_vm.disks.0.size}"
     eagerly_scrub    = "${data.vsphere_virtual_machine.cluster_template_vm.disks.0.eagerly_scrub}"
     thin_provisioned = "${data.vsphere_virtual_machine.cluster_template_vm.disks.0.thin_provisioned}"    
   }
@@ -43,9 +40,9 @@ resource "vsphere_record" "controllers" {
   vapp {
     properties {
        "guestinfo.coreos.config.data" = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
-       "guestinfo.coreos.config.data.encoding" = "base64"
-#      "guestinfo.hostname"                        = "basic-test.strader-ferris.com"
-      "guestinfo.interface.0.name"                = "ens192"
+       "guestinfo.coreos.config.data.encoding" = ""
+      "guestinfo.hostname"                        = "${element(null_resource.repeat.*.triggers.domain, count.index)}"
+#      "guestinfo.interface.0.name"                = "ens192"
 #      "guestinfo.interface.0.ip.0.address"        = "10.0.0.100/24"
 #      "guestinfo.interface.0.route.0.gateway"     = "10.0.0.1"
 #      "guestinfo.interface.0.route.0.destination" = "0.0.0.0/0"
@@ -58,19 +55,41 @@ resource "vsphere_record" "controllers" {
 
 }
 
+
 resource "vsphere_folder" "folder" {
-  path          = "${join('/', [var.vsphere_folder, var.cluster_name])}"
+  path          = "${join("/", list(var.vsphere_folder, var.cluster_name))}"
   type          = "vm"
-  datacenter_id = "${data.vsphere_datacenter.dc.id}"
+  datacenter_id = "${data.vsphere_datacenter.cluster_datacenter.id}"
+}
+
+resource "vsphere_tag_category" "category" {
+  name        = "typhoon-k8s-category"
+  cardinality = "MULTIPLE"
+  description = "Typhoon Kubernetes Management Tag"
+
+  associable_types = [
+    "VirtualMachine",
+    "Folder"
+  ]
 }
 
 # Tag to label controllers
 resource "vsphere_tag" "controllers" {
   name = "${var.cluster_name}-controller"
+  category_id = "${vsphere_tag_category.category.id}"
+}
+
+# controller ip address
+resource null_resource "controller_ip_address" {
+  triggers = {    
+    count = "${var.controller_count}"
+    ip_address = "${element(var.controller_ip_addresses,count.index)}"
+  }
 }
 
 # Controller Container Linux Config
 data "template_file" "controller_config" {
+#  count = "${var.controller_count}"
   count = "${var.controller_count}"
 
   template = "${file("${path.module}/cl/controller.yaml.tmpl")}"
@@ -78,10 +97,11 @@ data "template_file" "controller_config" {
   vars = {
     # Cannot use cyclic dependencies on controllers or their DNS records
     etcd_name   = "etcd${count.index}"
-    etcd_domain = "${var.cluster_name}-etcd${count.index}.${var.dns_zone}"
+    etcd_domain = "${var.cluster_name}-etcd${count.index}.${var.domain_suffix}"
 
     # etcd0=https://cluster-etcd0.example.com,etcd1=https://cluster-etcd1.example.com,...
-    etcd_initial_cluster  = "${join(",", formatlist("%s=https://%s:2380", null_resource.repeat.*.triggers.name, null_resource.repeat.*.triggers.domain))}"
+#    etcd_initial_cluster  = "${join(",", formatlist("%s=https://%s:2380", null_resource.repeat.*.triggers.name, null_resource.repeat.*.triggers.domain))}"
+    etcd_initial_cluster  = "${join(",", formatlist("%s=https://%s:2380", null_resource.repeat.*.triggers.name, null_resource.controller_ip_address.*.triggers.ip_address))}"
     k8s_dns_service_ip    = "${cidrhost(var.service_cidr, 10)}"
     cluster_domain_suffix = "${var.cluster_domain_suffix}"
     ssh_authorized_key      = "${var.ssh_authorized_key}"
@@ -95,7 +115,7 @@ resource null_resource "repeat" {
 
   triggers {
     name   = "etcd${count.index}"
-    domain = "${var.cluster_name}-etcd${count.index}.${var.dns_zone}"
+    domain = "${var.cluster_name}-etcd${count.index}.${var.domain_suffix}"
   }
 }
 
@@ -103,4 +123,10 @@ data "ct_config" "controller_ign" {
   count        = "${var.controller_count}"
   content      = "${element(data.template_file.controller_config.*.rendered, count.index)}"
   pretty_print = false
+}
+
+resource "null_resource" "export_rendered_template" {
+  provisioner "local-exec" {
+    command = "cat > /tmp/controller-test.txt <<EOL\n${data.ct_config.controller_ign.0.rendered}\nEOL"
+  }
 }

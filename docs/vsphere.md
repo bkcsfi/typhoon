@@ -1,6 +1,6 @@
 # vSphere
 
-In this tutorial, we'll create a Kubernetes v1.9.2 cluster on vSphere.
+In this tutorial, we'll create a Kubernetes v1.9.3 cluster on vSphere.
 
 We'll declare a Kubernetes cluster in Terraform using the Typhoon Terraform module. 
 
