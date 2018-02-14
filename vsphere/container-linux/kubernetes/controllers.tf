@@ -42,17 +42,8 @@ resource "vsphere_virtual_machine" "controllers" {
       "guestinfo.coreos.config.data" = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
       "guestinfo.coreos.config.data.encoding" = ""
       "guestinfo.hostname"                        = "${element(null_resource.repeat.*.triggers.domain, count.index)}"
-      "guestinfo.interface.0.name"                = "ens192"
-      "guestinfo.interface.0.ip.0.address"        = "${element(null_resource.controller_ip_address.*.triggers.ip_address, count.index)}/24"
-      "guestinfo.interface.0.route.0.gateway"     = "10.1.250.1"
-      "guestinfo.interface.0.route.0.destination" = "0.0.0.0/0"
-      "guestinfo.dns.server.0"                    = "10.1.250.6"
     }
   }  
-
-  # user_data = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
-  # ssh_keys  = "${var.ssh_fingerprints}"
-
 }
 
 

@@ -4,7 +4,7 @@ resource "null_resource" "copy-etcd-secrets" {
 
   connection {
     type    = "ssh"
-    host    = "${element(vsphere_record.controllers.*.ipv4_address, count.index)}"
+    host    = "${element(vsphere_virtual_machine.controllers.*.default_ip_address, count.index)}"
     user    = "core"
     timeout = "60m"
   }
@@ -72,7 +72,7 @@ resource "null_resource" "copy-kubeconfig" {
 
   connection {
     type    = "ssh"
-    host    = "${element(vsphere_record.workers.*.ipv4_address, count.index)}"
+    host    = "${element(vsphere_virtual_machine.workers.*.default_ip_address, count.index)}"
     user    = "core"
     timeout = "60m"
   }
@@ -99,7 +99,7 @@ resource "null_resource" "bootkube-start" {
 
   connection {
     type    = "ssh"
-    host    = "${vsphere_record.controllers.0.ipv4_address}"
+    host    = "${vsphere_virtual_machine.controllers.0.default_ip_address}"
     user    = "core"
     timeout = "30m"
   }
