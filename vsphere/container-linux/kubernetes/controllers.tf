@@ -39,14 +39,14 @@ resource "vsphere_virtual_machine" "controllers" {
 
   vapp {
     properties {
-       "guestinfo.coreos.config.data" = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
-       "guestinfo.coreos.config.data.encoding" = ""
+      "guestinfo.coreos.config.data" = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
+      "guestinfo.coreos.config.data.encoding" = ""
       "guestinfo.hostname"                        = "${element(null_resource.repeat.*.triggers.domain, count.index)}"
-#      "guestinfo.interface.0.name"                = "ens192"
-#      "guestinfo.interface.0.ip.0.address"        = "10.0.0.100/24"
-#      "guestinfo.interface.0.route.0.gateway"     = "10.0.0.1"
-#      "guestinfo.interface.0.route.0.destination" = "0.0.0.0/0"
-#      "guestinfo.dns.server.0"                    = "10.0.0.10"
+      "guestinfo.interface.0.name"                = "ens192"
+      "guestinfo.interface.0.ip.0.address"        = "${element(null_resource.controller_ip_address.*.triggers.ip_address, count.index)}/24"
+      "guestinfo.interface.0.route.0.gateway"     = "10.1.250.1"
+      "guestinfo.interface.0.route.0.destination" = "0.0.0.0/0"
+      "guestinfo.dns.server.0"                    = "10.1.250.6"
     }
   }  
 
@@ -121,8 +121,34 @@ resource null_resource "repeat" {
 
 data "ct_config" "controller_ign" {
   count        = "${var.controller_count}"
-  content      = "${element(data.template_file.controller_config.*.rendered, count.index)}"
+  content      = "${element(data.template_file.controller_config.*.rendered, count.index)}\n${element(data.template_file.controller_network_config.*.rendered, count.index)}"
   pretty_print = false
+}
+
+data "template_file" "controller_network_config" {
+#  count = "${var.controller_count}"
+  count = "${var.controller_count}"
+
+  template = <<EOF
+networkd:
+  units:
+    - name: 00-eth0.network
+      contents: |
+        [Match]
+        Name=ens192
+
+        [Network]
+        DNS=$${controller_dns_address}
+        Address=$${ip_address}/$${controller_ip_subnet_bits}
+        Gateway=$${controller_gateway_ip_address}
+EOF
+
+  vars = {
+    ip_address  = "${element(null_resource.controller_ip_address.*.triggers.ip_address, count.index)}"
+    controller_ip_subnet_bits = "${var.controller_ip_subnet_bits}"
+    controller_gateway_ip_address = "${var.controller_gateway_ip_address}"
+    controller_dns_address = "${var.controller_dns_address}"
+  }
 }
 
 resource "null_resource" "export_rendered_template" {

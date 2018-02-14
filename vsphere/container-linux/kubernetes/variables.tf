@@ -52,6 +52,22 @@ variable "controller_ip_addresses" {
   description = "list of controller ip addresses (overrides controller_count)"
 }
 
+variable "controller_dns_address" {
+  type        = "string"
+  description = "ip address of dns server for controllers"
+}
+
+variable "controller_gateway_ip_address" {
+  type        = "string"
+  description = "ip address of ipv4 gateway for controllers"
+}
+
+variable "controller_ip_subnet_bits" {
+  type        = "string"
+  description = "number of bits used by controller subnet"
+  default     = "24"
+}
+
 variable "controller_cpu_count" {
   type        = "string"
   default     = "2"
