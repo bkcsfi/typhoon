@@ -80,7 +80,6 @@ resource null_resource "controller_ip_address" {
 
 # Controller Container Linux Config
 data "template_file" "controller_config" {
-#  count = "${var.controller_count}"
   count = "${var.controller_count}"
 
   template = "${file("${path.module}/cl/controller.yaml.tmpl")}"
@@ -89,6 +88,8 @@ data "template_file" "controller_config" {
     # Cannot use cyclic dependencies on controllers or their DNS records
     etcd_name   = "etcd${count.index}"
     etcd_domain = "${var.cluster_name}-etcd${count.index}.${var.domain_suffix}"
+#    etcd_domain = "${element(var.controller_ip_addresses,0)}"
+#    the above didn't seem to work, though might want to retry it later
 
     # etcd0=https://cluster-etcd0.example.com,etcd1=https://cluster-etcd1.example.com,...
 #    etcd_initial_cluster  = "${join(",", formatlist("%s=https://%s:2380", null_resource.repeat.*.triggers.name, null_resource.repeat.*.triggers.domain))}"
@@ -96,6 +97,7 @@ data "template_file" "controller_config" {
     k8s_dns_service_ip    = "${cidrhost(var.service_cidr, 10)}"
     cluster_domain_suffix = "${var.cluster_domain_suffix}"
     ssh_authorized_key      = "${var.ssh_authorized_key}"
+    ip_address  = "${element(null_resource.controller_ip_address.*.triggers.ip_address, count.index)}"
   }
 }
 

@@ -95,7 +95,7 @@ resource "null_resource" "bootkube-start" {
   # Without depends_on, this remote-exec may start before the kubeconfig copy.
   # Terraform only does one task at a time, so it would try to bootstrap
   # while no Kubelets are running.
-  depends_on = ["null_resource.copy-etcd-secrets", "null_resource.copy-kubeconfig"]
+  depends_on = ["module.bootkube", "null_resource.copy-etcd-secrets", "null_resource.copy-kubeconfig"]
 
   connection {
     type    = "ssh"
