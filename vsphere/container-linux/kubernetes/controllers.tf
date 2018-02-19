@@ -87,6 +87,7 @@ data "template_file" "controller_config" {
   vars = {
     # Cannot use cyclic dependencies on controllers or their DNS records
     etcd_name   = "etcd${count.index}"
+    domain_name = "${var.domain_suffix}"
     etcd_domain = "${var.cluster_name}-etcd${count.index}.${var.domain_suffix}"
 #    etcd_domain = "${element(var.controller_ip_addresses,0)}"
 #    the above didn't seem to work, though might want to retry it later
