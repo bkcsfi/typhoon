@@ -109,8 +109,6 @@ systemd:
         WorkingDirectory=/opt/bootkube
         ExecStart=/opt/bootkube/bootkube-start
         ExecStartPost=/bin/touch /opt/bootkube/init_bootkube.done
-        [Install]
-        WantedBy=multi-user.target
 storage:
   files:
     - path: /etc/kubernetes/kubelet.env
@@ -120,6 +118,12 @@ storage:
         inline: |
           KUBELET_IMAGE_URL=docker://gcr.io/google_containers/hyperkube
           KUBELET_IMAGE_TAG=v1.9.3
+    - path: /etc/hostname
+      filesystem: root
+      mode: 0644
+      contents:
+        inline:
+          ${domain_name}          
     - path: /etc/sysctl.d/max-user-watches.conf
       filesystem: root
       contents:
@@ -144,11 +148,11 @@ storage:
           BOOTKUBE_ASSETS="$${BOOTKUBE_ASSETS:-/opt/bootkube/assets}"
           exec /usr/bin/rkt run \
             --trust-keys-from-https \
-            --volume assets,kind=host,source=$${BOOTKUBE_ASSETS} \
+            --volume assets,kind=host,source=$BOOTKUBE_ASSETS \
             --mount volume=assets,target=/assets \
             --volume bootstrap,kind=host,source=/etc/kubernetes \
             --mount volume=bootstrap,target=/etc/kubernetes \
-            $${RKT_OPTS} \
+            $$RKT_OPTS \
             $${BOOTKUBE_ACI}:$${BOOTKUBE_VERSION} \
             --net=host \
             --dns=host \
