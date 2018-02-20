@@ -72,8 +72,8 @@ resource "vsphere_tag" "controllers" {
 
 # controller ip address
 resource null_resource "controller_ip_address" {
+  count = "${var.controller_count}"
   triggers = {    
-    count = "${var.controller_count}"
     ip_address = "${element(var.controller_ip_addresses,count.index)}"
   }
 }
