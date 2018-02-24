@@ -140,9 +140,3 @@ EOF
     controller_dns_address = "${var.controller_dns_address}"
   }
 }
-
-resource "null_resource" "export_rendered_template" {
-  provisioner "local-exec" {
-    command = "cat > /tmp/controller-test.txt <<EOL\n${data.ct_config.controller_ign.0.rendered}\nEOL"
-  }
-}
