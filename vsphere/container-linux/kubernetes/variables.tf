@@ -56,7 +56,6 @@ variable "controller_domain_names" {
   type        = "list"
   description = "list of controller fully qualified domain names"
 }
-
 variable "controller_dns_address" {
   type        = "string"
   description = "ip address of dns server for controllers"
