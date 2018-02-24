@@ -39,7 +39,6 @@ resource "vsphere_virtual_machine" "workers" {
   vapp {
     properties {
       "guestinfo.coreos.config.data" = "${element(data.ct_config.worker_ign.*.rendered, count.index)}"
-      "guestinfo.coreos.config.data.encoding" = ""
     }
   }
 }

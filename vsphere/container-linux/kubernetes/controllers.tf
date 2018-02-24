@@ -40,7 +40,6 @@ resource "vsphere_virtual_machine" "controllers" {
   vapp {
     properties {
       "guestinfo.coreos.config.data" = "${element(data.ct_config.controller_ign.*.rendered, count.index)}"
-      "guestinfo.coreos.config.data.encoding" = ""
       "guestinfo.hostname"                        = "${element(null_resource.repeat.*.triggers.domain, count.index)}"
     }
   }  
