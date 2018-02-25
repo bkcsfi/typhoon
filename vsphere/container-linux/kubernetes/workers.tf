@@ -52,9 +52,11 @@ resource "vsphere_tag" "workers" {
 
 # Worker Container Linux Config
 data "template_file" "worker_config" {
+  count = "${var.worker_count}"
   template = "${file("${path.module}/cl/worker.yaml.tmpl")}"
 
   vars = {
+    domain_name = "${element(null_resource.repeat_worker.*.triggers.domain, count.index)}"
     k8s_dns_service_ip    = "${cidrhost(var.service_cidr, 10)}"
     k8s_etcd_service_ip   = "${cidrhost(var.service_cidr, 15)}"
     cluster_domain_suffix = "${var.cluster_domain_suffix}"
@@ -62,7 +64,18 @@ data "template_file" "worker_config" {
   }
 }
 
+# Horrible hack to generate a Terraform list of a desired length without dependencies.
+# Ideal ${repeat("worker", 3) -> ["worker", "worker", "worker"]}
+resource null_resource "repeat_worker" {
+  count = "${var.worker_count}"
+
+  triggers {
+    domain = "${var.cluster_name}-worker-${count.index}.${var.domain_suffix}"
+  }
+}
+
 data "ct_config" "worker_ign" {
-  content      = "${data.template_file.worker_config.rendered}"
+  count = "${var.worker_count}"
+  content      = "${element(data.template_file.worker_config.*.rendered, count.index)}"
   pretty_print = false
 }
